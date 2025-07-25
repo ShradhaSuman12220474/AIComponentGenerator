@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 // SVG Icon for the logout button
 const LogoutIcon = () => (
@@ -8,13 +8,34 @@ const LogoutIcon = () => (
 );
 
 const Sidebar = ({ onNewChat, onSelectSession }) => {
-    // Placeholder data - this would come from your state or API
-    const chatHistory = [
-        { id: '1', name: 'Login Form Component' },
-        { id: '2', name: 'Responsive Pricing Card' },
-        { id: '3', name: 'Navbar with Search' },
-        { id: '4', name: 'User Profile Avatar' },
-    ];
+    
+
+    const [chatHistory, setChatHistory] = useState([]);
+
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        const response = await fetch('http://localhost:3000/api/session/allSession', {
+        //   credentials: 'include', // if cookies/session are used
+        });
+        const result = await response.json();
+
+        if (result.success) {
+          const sessions = result.data.map((session) => ({
+            id: session._id,
+            name: session.sessionName || 'Untitled Session',
+          }));
+          setChatHistory(sessions);
+        } else {
+          console.error('Failed to fetch sessions:', result.message);
+        }
+      } catch (error) {
+        console.error('Error fetching sessions:', error);
+      }
+    };
+
+    fetchSessions();
+  }, []);
     
     const [activeSessionId, setActiveSessionId] = useState('1');
 
