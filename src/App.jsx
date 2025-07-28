@@ -11,35 +11,17 @@ export default function App() {
     const [components, setComponents] = useState([]);
 
     const [generatedCode, setGeneratedCode] = useState({
-        jsx: `function LoginForm() {
+        jsx: `import React from "react";
+
+export default function App() {
   return (
-    <div className="bg-slate-800 p-8 rounded-xl shadow-lg w-full max-w-sm">
-      <h2 className="text-2xl font-bold text-white mb-6 text-center">Login</h2>
-      <form>
-        <div className="mb-4">
-          <label className="block text-slate-400 text-sm font-bold mb-2" htmlFor="username">
-            Username
-          </label>
-          <input className="shadow appearance-none border rounded w-full py-2 px-3 bg-slate-700 border-slate-600 text-white leading-tight focus:outline-none focus:shadow-outline" id="username" type="text" placeholder="Username" />
-        </div>
-        <div className="mb-6">
-          <label className="block text-slate-400 text-sm font-bold mb-2" htmlFor="password">
-            Password
-          </label>
-          <input className="shadow appearance-none border rounded w-full py-2 px-3 bg-slate-700 border-slate-600 text-white mb-3 leading-tight focus:outline-none focus:shadow-outline" id="password" type="password" placeholder="******************" />
-        </div>
-        <div className="flex items-center justify-between">
-          <button className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full" type="button">
-            Sign In
-          </button>
-        </div>
-      </form>
+    <div className="p-8 text-center">
+      <h1 className="text-2xl font-bold mb-4">Welcome to AI Component Generator</h1>
+      <p className="text-gray-300">Ask the AI to build a Tailwind component for you!</p>
     </div>
   );
 }`,
-        css: `/* All styling is handled by Tailwind CSS utility classes.
-  No custom CSS is needed for this component.
-*/`
+        css: ""
     });
 
     const API_BASE_URL = "http://localhost:3000/api"; // adjust if needed
@@ -65,7 +47,12 @@ export default function App() {
           const { chatHistory = [], components = [] } = session.data;
           console.log(chatHistory);
 
-          setMessages(chatHistory); // if your backend sends chatHistory
+          const transformedHistory = chatHistory.map(msg => ({
+            role: msg.role || (msg.from === 'ai' ? 'ai' : 'user'),
+            content: msg.content
+          }));
+
+          setMessages(transformedHistory);
           setComponents(components); // if your backend sends saved components
         }
         } catch (error) {
@@ -93,25 +80,28 @@ export default function App() {
                 userPrompt: message,
               }),
             });
-            const { aiContent, newComponent } = await res.json();
+            const apiResponse = await res.json();
+
+              // Support both old { aiContent, newComponent } and new { aiMessage, component } formats
+              const aiText = apiResponse.aiMessage || apiResponse.aiContent || "";
+              const comp = apiResponse.component || apiResponse.newComponent || { jsx: '', css: '' };
 
               // Add AI message
-              setMessages(prev => [...prev, { from: 'ai', content: aiContent }]);
+              if (aiText) {
+                setMessages(prev => [...prev, { role: 'ai', content: aiText }]);
+              }
 
-              // Update generated code preview
-              setGeneratedCode({
-                jsx: newComponent.jsx,
-                css: newComponent.css || '',
-              });
+              // Update generated code preview only if jsx exists
+              if (comp.jsx) {
+                setGeneratedCode({
+                  jsx: comp.jsx,
+                  css: comp.css || '',
+                });
 
-              // Save component for session output history if needed
-              setComponents(prev => [...prev, newComponent]);
+                // Save component for session output history if needed
+                setComponents(prev => [...prev, comp]);
+              }
 
-
-            // const response = await res.json();
-            // console.log("AI response received:", response);
-
-            // Append AI response and new component (if any) to UI
           } catch (error) {
             console.error("Error sending message:", error);
           }
